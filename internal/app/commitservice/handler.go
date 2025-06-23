@@ -1,6 +1,7 @@
 package commitservice
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 
@@ -8,6 +9,8 @@ import (
 )
 
 func (s *Service) handleSubmit(msg *nats.Msg) {
+	ctx := context.Background()
+
 	var input CommitInput
 	if err := json.Unmarshal(msg.Data, &input); err != nil {
 		s.respondReject(msg, "invalid_format", err.Error())
@@ -22,7 +25,20 @@ func (s *Service) handleSubmit(msg *nats.Msg) {
 		return
 	}
 
-	// TODO: write to DB if valid
+	exists, err := s.store.ParentExists(ctx, input.ParentHash)
+	if err != nil {
+		s.respondReject(msg, "db_error", err.Error())
+		return
+	}
+	if !exists {
+		s.respondReject(msg, "invalid_parent", "parent hash not found")
+		return
+	}
+
+	if err := s.store.InsertCommit(ctx, hash, &input); err != nil {
+		s.respondReject(msg, "insert_failed", err.Error())
+		return
+	}
 
 	// response success
 	ack := CommitAccepted{

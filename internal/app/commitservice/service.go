@@ -9,17 +9,20 @@ import (
 
 // Service is a placeholder struct for commitservice package.
 type Service struct {
-	nc *nats.Conn
+	nc    *nats.Conn
+	store Store
 	// future: db, logger, metrics, validators
 }
 
 type Config struct {
-	NATS *nats.Conn
+	NATS  *nats.Conn
+	Store Store
 }
 
 func New(cfg Config) *Service {
 	return &Service{
-		nc: cfg.NATS,
+		nc:    cfg.NATS,
+		store: cfg.Store,
 	}
 }
 
