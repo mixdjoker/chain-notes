@@ -1,23 +1,25 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/nats-io/nats.go"
+	"github.com/mixdjoker/chain-notes/internal/app/commitservice"
 )
 
 func main() {
 	log.Println("[commit-service] starting...")
 
-	natsURL := os.Getenv("NATS_URL")
-	if natsURL == "" {
-		natsURL = nats.DefaultURL
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	nc, err := nats.Connect(natsURL)
+	cfg := loadConfig()
+
+	// Initialize NATS connection
+	nc, err := natsx.Connect(cfg.NATSUrl)
 	if err != nil {
 		log.Fatalf("failed to connect to NATS: %v", err)
 	}
@@ -25,26 +27,28 @@ func main() {
 
 	log.Println("[commit-service] connected to NATS")
 
-	sub, err := nc.QueueSubscribe("chain.commit.submit", "commit-workers", handleCommitSubmit)
-	if err != nil {
-		log.Fatalf("failed to subscribe: %v", err)
+	// Initialize application layer
+	app := commitservice.New(commitservice.Config{
+		NATS: nc,
+		// future: DB, Logger, Metrics...
+	})
+
+	// Run message processing loop
+	if err := app.Run(ctx); err != nil {
+		log.Fatalf("application terminated with error: %v", err)
 	}
-	defer sub.Unsubscribe()
 
-	// Wait for termination
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-
-	log.Println("[commit-service] shutting down")
+	log.Println("[commit-service] shutdown complete")
 }
 
-func handleCommitSubmit(msg *nats.Msg) {
-	log.Printf("[commit-service] received message: %s", string(msg.Data))
+type config struct {
+	NATSUrl string
+}
 
-	// TODO: parse JSON, verify signature, validate parent, write to DB
-
-	// simulate successful commit
-	response := []byte(`{"status":"ok"}`)
-	_ = msg.Respond(response)
+func loadConfig() config {
+	url := os.Getenv("NATS_URL")
+	if url == "" {
+		url = "nats://localhost:4222"
+	}
+	return config{NATSUrl: url}
 }
