@@ -7,8 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"chain-notes/internal/app/commitservice"
-	"chain-notes/internal/infra/natsx"
+	"github.com/mixdjoker/chain-notes/internal/app/commitservice"
 )
 
 func main() {
