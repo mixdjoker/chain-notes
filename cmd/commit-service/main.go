@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/mixdjoker/chain-notes/internal/app/commitservice"
+	"github.com/mixdjoker/chain-notes/internal/infra/natsx"
 )
 
 func main() {
