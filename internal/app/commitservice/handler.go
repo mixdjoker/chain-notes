@@ -16,12 +16,17 @@ func (s *Service) handleSubmit(msg *nats.Msg) {
 
 	log.Printf("[commit-service] received commit from %s", input.AuthorPubKey)
 
-	// TODO: validate signature, tree hash, parent, compute hash
+	hash, err := s.ValidateCommit(&input)
+	if err != nil {
+		s.respondReject(msg, "validation_failed", err.Error())
+		return
+	}
+
 	// TODO: write to DB if valid
 
-	// Stub response — simulate success
+	// response success
 	ack := CommitAccepted{
-		Hash:         "stub-hash",
+		Hash:         hash,
 		Timestamp:    input.Timestamp,
 		AuthorPubKey: input.AuthorPubKey,
 	}
