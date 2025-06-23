@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"os"
 	"os/signal"
@@ -28,10 +29,23 @@ func main() {
 
 	log.Println("[commit-service] connected to NATS")
 
+	// Initialize CockroachDB connection
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("database unreachable: %v", err)
+	}
+	log.Println("[commit-service] connected to database")
+
 	// Initialize application layer
+	store := commitservice.NewSQLStore(db)
 	app := commitservice.New(commitservice.Config{
-		NATS: nc,
-		// future: DB, Logger, Metrics...
+		NATS:  nc,
+		Store: store,
 	})
 
 	// Run message processing loop
@@ -43,7 +57,8 @@ func main() {
 }
 
 type config struct {
-	NATSUrl string
+	NATSUrl     string
+	DatabaseURL string
 }
 
 func loadConfig() config {
@@ -51,5 +66,12 @@ func loadConfig() config {
 	if url == "" {
 		url = "nats://localhost:4222"
 	}
-	return config{NATSUrl: url}
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		databaseURL = "postgres://user:password@localhost:26257/chain_notes?sslmode=disable"
+	}
+	return config{
+		NATSUrl:     url,
+		DatabaseURL: databaseURL,
+	}
 }
