@@ -19,9 +19,9 @@ type TreeEntry struct {
 }
 
 type Commit struct {
-	Hash         string // SHA-256 от содержимого коммита
-	ParentHash   string // Предыдущий коммит (или пусто для корня)
-	TreeHash     string // Корень содержимого (может быть одной заметкой или деревом)
+	Hash         string  // SHA-256 от содержимого коммита
+	ParentHash   *string // Предыдущий коммит (или nil для корня)
+	TreeHash     string  // Корень содержимого (может быть одной заметкой или деревом)
 	Timestamp    time.Time
 	AuthorPubKey string // Публичный ключ автора
 	Signature    string // Подпись: Sign(hash(tree + parent + ts))
