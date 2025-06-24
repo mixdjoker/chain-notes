@@ -1,46 +1,87 @@
-# chain-notes
+# Chain Notes
 
-## Project structure
+**Chain Notes** is a secure, blockchain-powered notebook system designed for storing sensitive information with version control and strong encryption. Inspired by Git and modern distributed systems, Chain Notes ensures that your notes are tamper-proof, versioned, and accessible only to their rightful owners.
 
-Предварительно
+## Key Features
 
-chain-notes/
-│
-├── cmd/                     # CLI и исполняемые бинарники
-│   ├── chain-cli/           # CLI-утилита
-│   └── commit-service/      # Сервис обработки коммитов
-│
-├── internal/                # Переиспользуемая логика и библиотеки
-│   ├── crypto/              # Подписи, хэширование, шифрование
-│   ├── model/               # Структуры Commit/Blob/Tree
-│   ├── storage/             # Работа с БД (Cockroach)
-│   └── transport/           # NATS-обёртки, сериализация
-│
-├── api/                     # gRPC/protobuf/JSON schema
-│   ├── events/              # JSON Schema для сообщений в NATS
-│   └── proto/               # Protobuf (если потребуется)
-│
-├── deploy/                  # Инфраструктура и правила диплоя
-│   ├── ansible/             # Ansible-роли и инвентори
-│   ├── systemd/             # systemd unit-файлы
-│   ├── docker/              # docker-compose или Dockerfile
-│   ├── nats/                # конфиги брокера, subject ACL, токены
-│   └── README.md            # инструкция по развертыванию
-│
-├── scripts/                 # Утилиты и вспомогательные скрипты
-│   ├── gen-keys.sh          # генерация ключей
-│   ├── load-test.sh         # нагрузочное тестирование
-│   └── reset-db.sh          # очистка CockroachDB
-│
-├── .github/                 # CI/CD (GitHub Actions)
-│   └── workflows/
-│       ├── build.yml        # сборка и тест
-│       └── deploy.yml       # CD (ansible, docker, systemd)
-│
-├── tests/                   # Интеграционные и e2e-тесты
-│   └── commit-flow/         # тестовая цепочка коммитов
-│
-├── README.md
-├── Makefile
-├── LICENSE
-└── go.mod
+- 🧱 Blockchain-Backed History
+Every change is committed to an immutable blockchain, providing transparent and verifiable history.
+
+- 🔐 End-to-End Encryption
+Notes are encrypted on the client side. Only those with the correct decryption key can view the content.
+
+- 🛰 Distributed Storage
+Content is stored using IPFS/Filecoin or other decentralized storage backends for maximum availability.
+
+- ⚡ Message-Driven Architecture
+The system communicates through NATS for modularity, scalability, and fault-tolerance.
+
+- 🛠 Built with Go and Rust
+Backend services are written in Go with performance-critical components implemented in Rust.
+
+## Use Cases
+
+- Private knowledge management
+
+- Secure journaling and note-taking
+
+- Encrypted collaborative documentation
+
+- Blockchain-based changelog or audit log systems
+
+## Getting Started
+
+Coming soon: setup guide, running the services locally with Docker, and usage examples.
+
+## Architecture
+
+```
+                         ┌──────────────┐
+                         │  Web / CLI   │
+                         └─────┬────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │  Commit API  │ ◄──── User sends encrypted content + metadata
+                        └─────┬────────┘
+                              │
+               ┌──────────────┼──────────────┐
+               ▼                              ▼
+      ┌────────────────┐           ┌───────────────────┐
+      │  CommitService │           │  StorageService   │
+      └──────┬─────────┘           └─────────┬─────────┘
+             │                               │
+             ▼                               ▼
+     ┌───────────────┐              ┌────────────────────┐
+     │  BlockchainDB │              │  IPFS/Filecoin/etc │
+     └───────────────┘              └────────────────────┘
+```
+
+Each note is:
+
+1. Encrypted locally.
+1. Wrapped in a signed commit.
+1. Stored in IPFS or another backend.
+1. Registered on-chain with its hash and metadata.
+1. Replicated and accessible based on trust and key ownership.
+
+## How It Works
+
+1. Create a Note<br>
+You write a note. It’s encrypted using a symmetric key.
+
+2. Commit & Sign<br>
+The encrypted note and metadata (e.g. parent hash) are bundled into a Git-style commit. It’s signed with your private key.
+
+3. Store Content<br>
+The encrypted payload is pushed to distributed storage (e.g. IPFS). A content address (CID) is returned.
+
+4. Publish to Chain<br>
+The commit hash, CID, and signature are written to a blockchain-like ledger through the CommitService.
+
+5. Verify & Fetch<br>
+Anyone with the right key can fetch the commit chain, verify signatures, and decrypt the note contents.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
