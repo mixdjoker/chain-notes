@@ -11,6 +11,7 @@ import (
 	"github.com/mixdjoker/chain-notes/internal/dbx"
 	"github.com/mixdjoker/chain-notes/internal/infra/messaging"
 	"github.com/mixdjoker/chain-notes/internal/infra/natsx"
+	"github.com/mixdjoker/chain-notes/internal/storage/sqlstore"
 )
 
 func main() {
@@ -38,7 +39,7 @@ func main() {
 	natsClient := messaging.New(nc)
 
 	// Create SQL store for commit service
-	store := commitservice.NewSQLStore(db)
+	store := sqlstore.New(db)
 
 	// Initialize application layer
 	app := commitservice.New(commitservice.Config{
