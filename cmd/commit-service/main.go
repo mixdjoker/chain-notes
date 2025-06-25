@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/mixdjoker/chain-notes/internal/app/commitservice"
+	"github.com/mixdjoker/chain-notes/internal/config"
+	"github.com/mixdjoker/chain-notes/internal/dbx"
+	"github.com/mixdjoker/chain-notes/internal/infra/messaging"
 	"github.com/mixdjoker/chain-notes/internal/infra/natsx"
 )
 
@@ -18,34 +19,31 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cfg := loadConfig()
+	if err := config.InitEnv(); err != nil {
+		log.Fatalf("[commit-service] failed to load .env: %v", err)
+	}
 
 	// Initialize NATS connection
-	nc, err := natsx.Connect(cfg.NATSUrl)
+	nc, err := natsx.Connect()
 	if err != nil {
-		log.Fatalf("failed to connect to NATS: %v", err)
+		log.Println("[commit-service] started without NATS connection")
 	}
 	defer nc.Drain()
 
-	log.Println("[commit-service] connected to NATS")
-
 	// Initialize CockroachDB connection
-	db, err := sql.Open("postgres", cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
+	db := dbx.Get()
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatalf("database unreachable: %v", err)
-	}
-	log.Println("[commit-service] connected to database")
+	// Create messaging adapter
+	natsClient := messaging.New(nc)
+
+	// Create SQL store for commit service
+	store := commitservice.NewSQLStore(db)
 
 	// Initialize application layer
-	store := commitservice.NewSQLStore(db)
 	app := commitservice.New(commitservice.Config{
-		NATS:  nc,
-		Store: store,
+		Messaging: natsClient,
+		Store:     store,
 	})
 
 	// Run message processing loop
@@ -54,24 +52,4 @@ func main() {
 	}
 
 	log.Println("[commit-service] shutdown complete")
-}
-
-type config struct {
-	NATSUrl     string
-	DatabaseURL string
-}
-
-func loadConfig() config {
-	url := os.Getenv("NATS_URL")
-	if url == "" {
-		url = "nats://localhost:4222"
-	}
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		databaseURL = "postgres://user:password@localhost:26257/chain_notes?sslmode=disable"
-	}
-	return config{
-		NATSUrl:     url,
-		DatabaseURL: databaseURL,
-	}
 }
