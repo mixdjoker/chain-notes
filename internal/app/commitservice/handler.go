@@ -4,15 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-
-	"github.com/nats-io/nats.go"
 )
 
-func (s *Service) handleSubmit(msg *nats.Msg) {
+func (s *Service) handleSubmit(msg IncomingMessage) {
 	ctx := context.Background()
 
 	var input CommitInput
-	if err := json.Unmarshal(msg.Data, &input); err != nil {
+	if err := json.Unmarshal(msg.Data(), &input); err != nil {
 		s.respondReject(msg, "invalid_format", err.Error())
 		return
 	}
@@ -50,7 +48,7 @@ func (s *Service) handleSubmit(msg *nats.Msg) {
 	_ = msg.Respond(data)
 }
 
-func (s *Service) respondReject(msg *nats.Msg, reason, details string) {
+func (s *Service) respondReject(msg IncomingMessage, reason, details string) {
 	rej := CommitRejected{
 		Error:   reason,
 		Details: details,

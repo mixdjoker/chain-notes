@@ -11,14 +11,14 @@ import (
 	"math/big"
 )
 
-// ValidateCommit выполняет базовую проверку валидности коммита:
-// - проверка подписи
-// - вычисление хэша
+// ValidateCommit performs basic commit validation:
+// - signature verification
+// - hash calculation
 func (s *Service) ValidateCommit(input *CommitInput) (string, error) {
 	log.Println("[validate] verifying signature and hashing commit")
 
-	// 1. Собираем canonical commit body (без подписи)
-	toHash := map[string]interface{}{
+	// 1. Assemble canonical commit body (without signature)
+	toHash := map[string]any{
 		"parent_hash":   input.ParentHash,
 		"tree_hash":     input.TreeHash,
 		"timestamp":     input.Timestamp,
@@ -30,11 +30,11 @@ func (s *Service) ValidateCommit(input *CommitInput) (string, error) {
 		return "", err
 	}
 
-	// 2. Вычисляем хэш
+	// 2. Calculate SHA-256 hash of the JSON representation
 	hash := sha256.Sum256(jsonBytes)
 	hashHex := hex.EncodeToString(hash[:])
 
-	// 3. Проверяем подпись (ECDSA)
+	// 3. Verify the signature (ECDSA)
 	valid, err := verifySignature(input.AuthorPubKey, input.Signature, hash[:])
 	if err != nil {
 		return "", err

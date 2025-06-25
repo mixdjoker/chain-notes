@@ -8,7 +8,9 @@ import (
 )
 
 // Connect establishes a connection to a NATS server using the provided URL.
-func Connect(url string) (*nats.Conn, error) {
+func Connect() (*nats.Conn, error) {
+	cfg := getConfig()
+
 	opts := []nats.Option{
 		nats.Name("ChainNotes-NATS"),
 		nats.MaxReconnects(10),              // До 10 попыток переподключения
@@ -26,10 +28,13 @@ func Connect(url string) (*nats.Conn, error) {
 		}),
 	}
 
-	nc, err := nats.Connect(url, opts...)
+	nc, err := nats.Connect(cfg.URL, opts...)
 	if err != nil {
+		log.Printf("[natx] failed to connect to NATS: %v", err)
 		return nil, err
 	}
+
+	log.Println("[natx] connected to NATS")
 
 	return nc, nil
 }
