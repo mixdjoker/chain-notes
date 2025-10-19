@@ -38,7 +38,6 @@ func (s *Store) ParentExists(ctx context.Context, hash string) (bool, error) {
 	}
 
 	queryName := "sqlstore.ParentExists"
-
 	query, args, err := sq.
 		Select("1").
 		From(tableCommits).
